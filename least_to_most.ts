@@ -1,6 +1,7 @@
 import { z } from "zod";
 import Instructor from "@instructor-ai/instructor";
 import OpenAI from "openai";
+import chalk from "chalk";
 
 const oai = new OpenAI({
   apiKey: Bun.env.OPENAI_API_KEY ?? undefined,
@@ -35,7 +36,7 @@ async function decomposeQuery(query: string, numSubQuestions: number): Promise<R
   const SubQuestionsSchema = createSubQuestionsSchema(numSubQuestions);
   const decompositionPrompt = `Decompose the following query into ${numSubQuestions} sub-questions: ${query}`;
   
-  console.log(`\nDecomposition Prompt:\n${decompositionPrompt}\n`);
+  console.log(chalk.blue(`\nDecomposition Prompt:\n${decompositionPrompt}\n`));
 
   const subQuestionsResponse = await client.chat.completions.create({
     messages: [{ role: "user", content: decompositionPrompt }],
@@ -46,7 +47,7 @@ async function decomposeQuery(query: string, numSubQuestions: number): Promise<R
     },
   });
 
-  console.log(`Sub-Questions Response:\n${JSON.stringify(subQuestionsResponse['sub_questions'], null, 2)}\n`);
+  console.log(chalk.green(`Sub-Questions Response:\n${JSON.stringify(subQuestionsResponse['sub_questions'], null, 2)}\n`));
 
   return SubQuestionsSchema.parse(subQuestionsResponse);
 }
@@ -59,7 +60,7 @@ async function getReasoningAndAnswer(subQuestions: Record<string, string>): Prom
   for (const subQuestion of Object.values(subQuestions)) {
     const reasoningPrompt = `Question: ${subQuestion}\nPrevious Reasoning: ${reasoning}\nAnswer: ${answer}\nProvide reasoning and answer for the current question.`;
     
-    console.log(`\nReasoning Prompt:\n${reasoningPrompt}\n`);
+    console.log(chalk.blue(`\nReasoning Prompt:\n${reasoningPrompt}\n`));
 
     const reasoningAnswerResponse = await client.chat.completions.create({
       messages: [{ role: "user", content: reasoningPrompt }],
@@ -70,7 +71,7 @@ async function getReasoningAndAnswer(subQuestions: Record<string, string>): Prom
       },
     });
 
-    console.log(`Reasoning: ${reasoningAnswerResponse.reasoning}\nAnswer: ${reasoningAnswerResponse.answer}\n`);
+    console.log(chalk.green(`Reasoning: ${reasoningAnswerResponse.reasoning}\nAnswer: ${reasoningAnswerResponse.answer}\n`));
 
     reasoning += reasoningAnswerResponse.reasoning + ' ';
     answer = reasoningAnswerResponse.answer;
@@ -82,15 +83,15 @@ async function getReasoningAndAnswer(subQuestions: Record<string, string>): Prom
 // Main function to handle the user query
 async function handleUserQuery(query: string, subQs: number): Promise<ReasoningAnswer> {
   // Step 1: Decompose the query into sub-questions
-  console.log(`\nHandling User Query:\n${query}\n`);
+  console.log(chalk.yellow(`\nHandling User Query:\n${query}\n`));
   
   const subQuestions = await decomposeQuery(query, subQs);
 
   // Step 2: Get reasoning and answers for each sub-question
   const finalReasoningAnswer = await getReasoningAndAnswer(subQuestions);
 
-  console.log(`\nFinal Reasoning:\n${finalReasoningAnswer.reasoning}\n`);
-  console.log(`Final Answer:\n${finalReasoningAnswer.answer}\n`);
+  console.log(chalk.magenta(`\nFinal Reasoning:\n${finalReasoningAnswer.reasoning}\n`));
+  console.log(chalk.magenta(`Final Answer:\n${finalReasoningAnswer.answer}\n`));
   
   return finalReasoningAnswer;
 }
